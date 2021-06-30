@@ -1,0 +1,8 @@
+Arduino 1: [ARDUINO DE CONTROLE]
+
+	Porta 8: [LCD] Porta de Informação 1
+	Porta 9: [LCD] Porta de Informação 2
+	Porta 10: [LCD] Porta de Informação 3
+	Porta 11: [LCD] Porta de Informação 4
+	Porta 12: [LCD] Ativação
+	Porta 13: [LCD] Seção de Registro
