@@ -26,6 +26,14 @@
 #define LCD_ACTIVE 12
 //  ~ Porta de seção de registro do LCD.
 #define LCD_RECORDS_SECTION 13
+//  ~ Porta responsável pelo interruptor manual de luz da sala.
+#define LIVING_ROOM_LIGHTS_INT A0
+//  ~ Porta responsável pelo sensor de presença da sala.
+#define LIVING_ROOM_PIR_SENSOR A1
+//  ~ Luzes da sala.
+#define LIVING_ROOM_LEDS A2
+//  ~ Porta responsável pelo sensor de luz ambiente.
+#define LIVING_ROOM_LIGHT_SENSOR A3
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Variáveis do sistema de luz da sala.                                                                      */
 //  ~ Respectivamente, hora, minuto e segundo exibidos no relógio.
@@ -167,11 +175,19 @@ void setup()
   pinMode(LIVING_ROOM_AUTO_LIGHTS, INPUT);
   pinMode(HOUR_AMERICAN_MODE, INPUT);
   pinMode(LCD_BACKGROUND, INPUT);
+  pinMode(LIVING_ROOM_LIGHTS_INT, INPUT);
+  pinMode(LIVING_ROOM_PIR_SENSOR, INPUT);
+
+  //  ~ Porta de saída de dados ('OUTPUT') do arduino.
+  pinMode(LIVING_ROOM_LEDS, OUTPUT);
+  
   //  ~ Inicializa o valor das variáveis.
   //  Ele armazena na variável 'livingRoom_auto_mode' o inverso do respectivo interruptor, para garantir o acionamento no primeiro loop.
   livingRoom_auto_mode = !((bool) digitalRead(LIVING_ROOM_AUTO_LIGHTS));
   //  Armazena o formato de horário na variável respectiva.
   american_clock_format = (bool) digitalRead(HOUR_AMERICAN_MODE);
+
+  digitalWrite(LIVING_ROOM_LEDS, HIGH);
   
   //  ~ Inicializa os horários do relógio.
   hour = START_HOUR;
