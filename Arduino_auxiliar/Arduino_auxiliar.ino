@@ -1,1 +1,2 @@
-#define ARDUINO_ID 1
+/* ---------------------------------------------------------------------------------------------------------- */
+/*  Definição de referências de uso para as portas do arduino.                                                */
