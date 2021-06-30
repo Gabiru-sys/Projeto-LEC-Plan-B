@@ -1,16 +1,25 @@
 Arduino 1: [ARDUINO DE CONTROLE]
 
-	Porta 3: [BOTÃO] Função UP - Menu
-	Porta 4: [BOTÃO] Função DOWN - Menu
-	Porta 5: [BOTÃO] Menu da tela
-	Porta 6: [INTERRUPTOR] Troca de modo de exibição do horário
-	Porta 7: [INTERRUPTOR] Luz Automática / Luz Manual (Sala)
+	Porta 2: [BOTÃO] Função UP - Menu
+	Porta 3: [BOTÃO] Função DOWN - Menu
+	Porta 4: [BOTÃO] Menu da tela
+	Porta 5: [INTERRUPTOR] Troca de modo de exibição do horário
+	Porta 6: [INTERRUPTOR] Luz Automática / Luz Manual (Sala)
+	Porta 7: [LCD] LED de iluminação de fundo.
 	Porta 8: [LCD] Porta de Informação 7
 	Porta 9: [LCD] Porta de Informação 6
 	Porta 10: [LCD] Porta de Informação 5
 	Porta 11: [LCD] Porta de Informação 4
 	Porta 12: [LCD] Ativação
 	Porta 13: [LCD] Seção de Registro
+
+	Porta A0: [INTERRUPTOR] Acendimento manual das luzes
+	Porta A1: [SENSOR] Sensor PIR de presença
+	Porta A2: [LED] Luzes
+	Porta A3: [SENSOR] Luminosidade ambiente
+Arduino 2: [ARDUINO AUXILIAR]
+
+	
 
 Fuções LCD:
 	- Limpa a linha e escreve nela: LCDWrite(String message, int row);
