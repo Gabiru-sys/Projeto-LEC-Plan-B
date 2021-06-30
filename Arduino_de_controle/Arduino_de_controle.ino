@@ -12,9 +12,11 @@
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Definição de referências de uso para as portas do arduino.                                                */
 //  ~ Porta que define se o horário deve ser exibido em formato a.m./p.m. ou não.
-#define HOUR_AMERICAN_MODE 6
+#define HOUR_AMERICAN_MODE 5
 //  ~ Porta do interruptor que troca a luz da sala entre automática e manual.
-#define LIVING_ROOM_AUTO_LIGHTS 7
+#define LIVING_ROOM_AUTO_LIGHTS 6
+//  ~ Porta de luz de fundo do LCD.
+#define LCD_BACKGROUND 7
 //  ~ Portas de informação do LCD.
 #define LCD_0 11
 #define LCD_1 10
@@ -164,7 +166,7 @@ void setup()
   //  ~ Portas de entrada de dados ('INPUT') do arduino.
   pinMode(LIVING_ROOM_AUTO_LIGHTS, INPUT);
   pinMode(HOUR_AMERICAN_MODE, INPUT);
-
+  pinMode(LCD_BACKGROUND, INPUT);
   //  ~ Inicializa o valor das variáveis.
   //  Ele armazena na variável 'livingRoom_auto_mode' o inverso do respectivo interruptor, para garantir o acionamento no primeiro loop.
   livingRoom_auto_mode = !((bool) digitalRead(LIVING_ROOM_AUTO_LIGHTS));
