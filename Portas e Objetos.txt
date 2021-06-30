@@ -1,8 +1,13 @@
 Arduino 1: [ARDUINO DE CONTROLE]
 
-	Porta 8: [LCD] Porta de Informação 1
-	Porta 9: [LCD] Porta de Informação 2
-	Porta 10: [LCD] Porta de Informação 3
+	Porta 7: [INTERRUPTOR] Luz Automática / Luz Manual (Sala)
+	Porta 8: [LCD] Porta de Informação 7
+	Porta 9: [LCD] Porta de Informação 6
+	Porta 10: [LCD] Porta de Informação 5
 	Porta 11: [LCD] Porta de Informação 4
 	Porta 12: [LCD] Ativação
 	Porta 13: [LCD] Seção de Registro
+
+Fuções LCD:
+	- Limpa a linha e escreve nela: LCDWrite(String message, int row);
+	- Substitui uma parte da mensagem: LCDWrite(String message, int row, int colum);
