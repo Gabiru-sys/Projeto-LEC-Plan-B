@@ -1,5 +1,9 @@
 Arduino 1: [ARDUINO DE CONTROLE]
 
+	Porta 3: [BOTÃO] Função UP - Menu
+	Porta 4: [BOTÃO] Função DOWN - Menu
+	Porta 5: [BOTÃO] Menu da tela
+	Porta 6: [INTERRUPTOR] Troca de modo de exibição do horário
 	Porta 7: [INTERRUPTOR] Luz Automática / Luz Manual (Sala)
 	Porta 8: [LCD] Porta de Informação 7
 	Porta 9: [LCD] Porta de Informação 6
