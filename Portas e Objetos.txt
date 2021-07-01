@@ -17,8 +17,32 @@ Arduino 1: [ARDUINO DE CONTROLE]
 	Porta A1: [SENSOR] Sensor PIR de presença
 	Porta A2: [LED] Luzes
 	Porta A3: [SENSOR] Luminosidade ambiente
+
 Arduino 2: [ARDUINO AUXILIAR]
 
+	Porta 3: [LED] Indicador do modo de aquecimento do ar-condicionado
+	Porta 4: [LED] Indicador do modo de refrigeração do ar-condicionado
+	Porta 5: [BUZZER] Despertador
+	Porta 6: [LED] Luzes da garagem
+	Porta 7: [BUZZER] Alarme da casa
+	Porta 8: [SENSOR] Sensor PIR de presença interno da garagem
+	Porta 9: [SENSOR] Sensor PIR de presença externo
+	Porta 11: [BUZZER] Alarme de vazamento de gás
+	Porta 12: [RELÉ] Motor de fechamento forçado da válvula de gás
+
+	Porta A4: [SENSOR] Sensor de temperatura (termostato) do ar condicionado
+	Porta A5: [SENSOR] Sensor de gás
+
+	[LED] Indicador de aquecimento
+	[LED] Indicador de refrigeração
+
+	[SENSOR] Sensor PIR de presença interna da garagem
+	[LED] Iluminação interna da garagem
+
+	[SENSOR] Sensor PIR de presença externa da casa
+	[BUZZER] Alarme da casa
+
+	[BUZZER] Despertador
 	
 
 Fuções LCD:
