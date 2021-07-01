@@ -23,8 +23,8 @@ Arduino 2: [ARDUINO AUXILIAR]
 	Porta 3: [LED] Indicador do modo de aquecimento do ar-condicionado
 	Porta 4: [LED] Indicador do modo de refrigeração do ar-condicionado
 	Porta 5: [BUZZER] Despertador
-	Porta 6: [LED] Luzes da garagem
-	Porta 7: [BUZZER] Alarme da casa
+	Porta 6: [BUZZER] Alarme da casa
+	Porta 7: [LED] Luzes da garagem
 	Porta 8: [SENSOR] Sensor PIR de presença interno da garagem
 	Porta 9: [SENSOR] Sensor PIR de presença externo
 	Porta 11: [BUZZER] Alarme de vazamento de gás
