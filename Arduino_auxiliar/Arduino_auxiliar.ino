@@ -12,6 +12,10 @@
 #define GAS_ALERT_FREQUENCY 392
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Definição de referências de uso para as portas do arduino.                                                */
+//  ~ Luzes da garagem
+#define LED_GARAGE_LIGHT 6
+//  ~ Sensor de presença interno da garagem.
+#define GARAGE_INTERNAL_PIR 8
 //  ~ Alerta de vazamento de gás.
 #define GAS_ALERT 11
 //  ~ Porta do motor de fechamento da válvula de gás.
@@ -31,6 +35,15 @@ unsigned long gas_engine_start_function;
 //  ~ Metrónomo do alerta de gás.
 unsigned long gas_buzzer_metronome;
 /* ---------------------------------------------------------------------------------------------------------- */
+/*  Variáveis referentes ao monitoramento de presença interno da garagem.                                     */
+//  ~ Informa se as luzes estão acesas ou apagadas. Como isso depende das relações envolvidas no loop(), 
+//  o sistema inicaliza como apagadas.
+bool garage_lights;
+//  ~ Informa se as luzes foram ligadas com o PIR ou não.
+bool garage_lights_on_with_PIR;
+//  ~ Instante no qual a luz foi ligada.
+unsigned long garage_time_lights_on;
+/* ---------------------------------------------------------------------------------------------------------- */
 /*  Função de entrada do programa.                                                                            */
 void setup()
 {
@@ -39,11 +52,12 @@ void setup()
   while (!Serial);
 
   //  ~ Portas de entrada de dados ('INPUT') do arduino.
-
+  pinMode(GARAGE_INTERNAL_PIR, INPUT);
 
   //  ~ Porta de saída de dados ('OUTPUT') do arduino.
   pinMode(GAS_ALERT, OUTPUT);
   pinMode(GAS_FORCE_CLOSE_ENGINE, OUTPUT);
+  pinMode(LED_GARAGE_LIGHT, OUTPUT);
 
   //  ~ Inicializa as variáveis globais.
   //  Indica que não há vazamento de gás, caso haja, ele indicará no loop().
@@ -54,7 +68,13 @@ void setup()
   gas_signal = -1;
   //  Zera os valores de tempo. O valor de 0 indica que a função está ou pode estar desligada.
   gas_engine_start_function = 0;
-  gas_buzzer_metronome = 0;  
+  gas_buzzer_metronome = 0;
+  //  Torna a variável da sala como desligada por enquanto.
+  garage_lights = false;  
+  //  Coloca o uso do sensor PIR como falso, momentaneamente.
+  garage_lights_on_with_PIR = false;
+  //  Momento no qual as luzes foram acesas (define como 0).
+  garage_time_lights_on = 0;
 }
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Loop principal do sistema.                                                                                */
