@@ -276,7 +276,7 @@ void loop()
     //  ~ Informa a alteração.
     livingRoom_lights = _livingRoom_lights;
     //  ~ Se for para acender, acende. Se não, apaga.
-    digitalWrite(LIVING_ROOM_LEDS, (bool) _livingRoom_lights);
+    digitalWrite(LIVING_ROOM_LEDS, (int) _livingRoom_lights);
   }
 
   //  ~ Atualiza o horário do relógio.
