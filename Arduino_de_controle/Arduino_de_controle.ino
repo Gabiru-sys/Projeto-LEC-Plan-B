@@ -4,11 +4,17 @@
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Configurações de sistema.                                                                                 */
 //  ~ Configurações de horário do relógio.
-#define START_HOUR 19
+#define START_HOUR 20
 #define START_MINUTE 25
 #define START_SECOND 10
 //  ~ Tempo para atualização do relógio.
 #define CLOCK_REFRESH_DELAY 1000
+//  ~ Horario de acionamento automático das luzes da sala.
+#define LIVING_ROOM_LIGHTS_TIME_TO_ON 20
+//  ~ Horario de desligamento automático das luzes da sala.
+#define LIVING_ROOM_LIGHTS_TIME_TO_OFF 22
+//  ~ Intervalo no qual as luzes da sala ficam ligadas após o acionamento do sensor de presença.
+#define LIVING_ROOM_LIGHTS_PIR_INTERVAL 5000
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Definição de referências de uso para as portas do arduino.                                                */
 //  ~ Porta que define se o horário deve ser exibido em formato a.m./p.m. ou não.
@@ -35,7 +41,7 @@
 //  ~ Porta responsável pelo sensor de luz ambiente.
 #define LIVING_ROOM_LIGHT_SENSOR A3
 /* ---------------------------------------------------------------------------------------------------------- */
-/*  Variáveis do sistema de luz da sala.                                                                      */
+/*  Variáveis do sistema de relógio.                                                                          */
 //  ~ Respectivamente, hora, minuto e segundo exibidos no relógio.
 int hour;
 int minute;
@@ -48,6 +54,15 @@ bool american_clock_format;
 /*  Variáveis do sistema de luz da sala.                                                                      */
 //  ~ Informa se a luz da sala está em modo automático ou não.
 bool livingRoom_auto_mode;
+//  ~ Informa se as luzes estão acesas ou apagadas. Como isso depende das relações envolvidas no loop(), 
+//  o sistema inicaliza como apagadas.
+bool livingRoom_lights;
+//  ~ Informa se as luzes foram ligadas com o PIR ou não.
+bool livingRoom_lights_on_with_PIR;
+//  ~ Sinal do sensor de luz ambiente.
+int livingRoom_lightSensor_signal;
+//  ~ Instante no qual a luz foi ligada.
+unsigned long livingRoom_time_lights_on;
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Variáveis do sistema do LCD.                                                                              */
 //  ~ Elemento que representa o LCD no código e responsável por seu funcionamento.
@@ -186,15 +201,22 @@ void setup()
   livingRoom_auto_mode = !((bool) digitalRead(LIVING_ROOM_AUTO_LIGHTS));
   //  Armazena o formato de horário na variável respectiva.
   american_clock_format = (bool) digitalRead(HOUR_AMERICAN_MODE);
-
-  digitalWrite(LIVING_ROOM_LEDS, HIGH);
-  
-  //  ~ Inicializa os horários do relógio.
+  //  Torna a variável da sala como desligada por enquanto.
+  livingRoom_lights = false;  
+  //  Coloca o uso do sensor PIR como falso, momentaneamente.
+  livingRoom_lights_on_with_PIR = false;
+  //  Inicializa o sensor de luz ambiente.
+  livingRoom_lightSensor_signal = -1;
+  //  Momento no qual as luzes foram acesas (define como 0).
+  livingRoom_time_lights_on = 0;
+  //  Inicializa os horários do relógio.
   hour = START_HOUR;
   minute = START_MINUTE;
   second = START_SECOND;
   //  ~ Inicializa o relógio.
   ClockRefresh();
+  //  ~ Efetiva a atuação de 'livingRoom_lights'.
+  digitalWrite(LIVING_ROOM_LEDS, (int) livingRoom_lights);
 }
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Loop principal do sistema.                                                                                */
@@ -202,22 +224,61 @@ void loop()
 {
   //  ~ Declara e inicializa as variaveis comparativas de estado.
   bool _livingRoom_auto_mode = (bool) digitalRead(LIVING_ROOM_AUTO_LIGHTS);
+  bool _livingRoom_lights = false;
+  int _livingRoom_lightSensor_signal = analogRead(LIVING_ROOM_LIGHT_SENSOR);
+  //  ~ Variáveis de estado locais.
+  bool livingRoom_light_low;
 
   //  ~ Captura e atualiza os valores de estado nas variáveis.
   //  Formato de hora.
   american_clock_format = (bool) digitalRead(HOUR_AMERICAN_MODE);
 
+  //  ~ Verifica atualização no sensor de luz ambiente.
+  if (livingRoom_lightSensor_signal != _livingRoom_lightSensor_signal)
+  {
+    //  ~ Altera o valor.
+    livingRoom_lightSensor_signal = _livingRoom_lightSensor_signal;
+    //  ~ Calcula o percentual de luminosidade.
+    int light_percent = map(_livingRoom_lightSensor_signal, 550, 1023, 100, 0);
+    //  ~ Se a luminosidade for inferior a 40%, informa em 'livingRoom_light_low' (true), se não, (false).
+    if (light_percent < 40) livingRoom_light_low = true; else livingRoom_light_low = false;
+  }
+
+  //  ~ Verifica se as luzes estão em modo automático ou manual (para evitar sobrecarda de chamados ele faz uso da
+  //  variável local na validação.
+  if (_livingRoom_auto_mode)
+  {
+    //  ~ No modo automático, a luz é ligada de um horário fixo regulado por enquanto nos #define. Futuramente, é
+    //  possível alterar para um sistema de configuração via menu do LED com controle UP/DOWN.
+    if ((hour >= LIVING_ROOM_LIGHTS_TIME_TO_ON) and (hour <= LIVING_ROOM_LIGHTS_TIME_TO_OFF)) { _livingRoom_lights = true; livingRoom_lights_on_with_PIR = false; }
+    //  ~ Caso a luz não seja acesa devido ao horário, ela pode ser acesa por conta da luminosidade baixa combinada
+    //  com o sensor PIR.
+    else if ((livingRoom_light_low) and (digitalRead(LIVING_ROOM_PIR_SENSOR))) { livingRoom_lights_on_with_PIR = true; livingRoom_time_lights_on = millis(); }
+    //  ~ Por fim, caso nenhuma das opções realize o acendimento da luz, ela é desligada.
+    else _livingRoom_lights = false;
+    //  ~ Se a luz tiver sido acesa pelo PIR em algum momento, faz a atualização.
+    if (livingRoom_lights_on_with_PIR) _livingRoom_lights = true;
+    //  ~ Se a luz tiver sido acesa pelo sensor PIR, ela deve ficar acesa por um tempo limitado, quem controla isso é o millis().
+    if ((livingRoom_lights_on_with_PIR) and (millis() >= (livingRoom_time_lights_on + LIVING_ROOM_LIGHTS_PIR_INTERVAL))) { _livingRoom_lights = false; livingRoom_lights_on_with_PIR = false; }
+  }
+  else
+  {
+    //  ~ Basea-se no interruptor de ligado/desligado.
+    _livingRoom_lights = (bool) digitalRead(LIVING_ROOM_LIGHTS_INT);
+  }
+  
   //  ~ Verifica atualizações de estado.
   //  Interruptor de modo manual ou automático das luzes da sala.
-  if (livingRoom_auto_mode != _livingRoom_auto_mode) 
+  if (livingRoom_auto_mode != _livingRoom_auto_mode) livingRoom_auto_mode = _livingRoom_auto_mode;
+  //  Luzes da sala.
+  if (livingRoom_lights != _livingRoom_lights) 
   {
-    //  ~ Atualiza o estado do interruptor.
-    livingRoom_auto_mode = _livingRoom_auto_mode;
-
-    if (livingRoom_auto_mode) LCDWrite("Luz ligada", 0); else LCDWrite("Luz desligada", 0);
+    //  ~ Informa a alteração.
+    livingRoom_lights = _livingRoom_lights;
+    //  ~ Se for para acender, acende. Se não, apaga.
+    digitalWrite(LIVING_ROOM_LEDS, (bool) _livingRoom_lights);
   }
 
   //  ~ Atualiza o horário do relógio.
   if(millis() >= (lastClockRefresh + CLOCK_REFRESH_DELAY)) ClockRefresh();
-  delay(200);
 }
