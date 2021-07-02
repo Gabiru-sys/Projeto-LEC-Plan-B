@@ -17,20 +17,18 @@
 #define LIVING_ROOM_LIGHTS_PIR_INTERVAL 5000
 //  ~ Intervalo no qual o menu pode ficar parado.
 #define MENU_ACCEPT_SLEEP_INTERVAL 5000
-//  ~ Limite do menu.
-#define MENU_LIMIT 2
+//  ~ Variação de temperatura do menu.
+#define TEMP_VAR 2
 //  ~ Temperatura inicial.
 #define TEMPERATURE 24
-//  ~ Estado inicial do alarme.
-#define ALARM false
+//  ~ Intervalo de delay dos botões.
+#define BUTTON_DELAY 50
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Definição de referências de uso para as portas do arduino.                                                */
 //  ~ Função UP do menu.
-#define MENU_UP 2
+#define MENU_DOWN 2
 //  ~ Função DOWN do menu.
-#define MENU_DOWN 3
-//  ~ Botão de controle do menu.
-#define MENU_BUTTON 4
+#define MENU_UP 3
 //  ~ Luz de fundo do display.
 #define LCD_BACKGROUND_LED 7
 //  ~ Porta que define se o horário deve ser exibido em formato a.m./p.m. ou não.
@@ -87,23 +85,24 @@ LiquidCrystal lcd (LCD_RECORDS_SECTION, LCD_ACTIVE, LCD_0, LCD_1, LCD_2, LCD_3);
 String LCDRow[2];
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Variáveis do menu.                                                                                        */
-//  ~ Variável que salva a tela do menu.
-//  A tela '0' é a padrão, exibindo uma informação em branco.
-//  A tela '1' permite a alteração da temperatura.
-//  A tela '2' permite a alteração do alarme.
-//  A tela '3' permite a alteração do horário do despertador.
-//  A tela '4' permite a alteração dos minutos do despertador (variando de 15 em 15).
-//  A tela '5' permite a alteração do horário do relógio.
-//  A tela '6' permite a alteração dos minutos do relógio.
-//  A tela '7' permite a alteração dos segundos do relógio.
-//    Após a tela apagar ele retorna automáticamente para a '0'
-int menu_screen;
-//  ~ Registra o instante do millis() em que a tela foi ligada (botão menu foi pressionado).
-unsigned long active_lcd_menu;
-//  ~ Controle de temperatura.
-float temperature;
-//  ~ Alarme esta ligado ou desligado?
-bool alarm_isActive;
+//  Temperatura.
+int temperature = TEMPERATURE;
+//  Indica se o menu tá ligado ou não.
+bool menuActived = false;
+//  Tempo em que o menu foi ligado.
+unsigned long menuActived_time = 0;
+//  Estado do botão up.
+bool upButton_state = false;
+// Estado do botão down.
+bool downButton_state = false;
+//  Ultimo sentido do botão UP.
+bool upButton_Last = false;
+//  Ultimo sentido do botão DOWN.
+bool downButton_Last = false;
+//  Instante de pressionamento do UP.
+unsigned long upLast_time = 0;
+//  Instante de pressionamento do DOWN.
+unsigned long downLast_time = 0;
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Função do arduino.                                                                                        */
 //  ~ Existem duas versões da função de escrita.
@@ -211,19 +210,6 @@ void ClockRefresh()
   lastClockRefresh = millis();
 }
 /* ---------------------------------------------------------------------------------------------------------- */
-/*  Faz o envio de informação.                                                                                */
-void Send(int code, int message)
-{
-  //  ~ Buffer de envio.
-  unsigned long _buffer;
-  //  ~ Adiciona ao buffer a mensagem.
-  _buffer = (unsigned long) (message);
-  //  ~ Adiciona a esquerda da mensagem o código.
-  _buffer += (code * 100000UL);
-  //  ~ Envia a mensagem.
-  Serial.println(_buffer);
-}
-/* ---------------------------------------------------------------------------------------------------------- */
 /*  Função de entrada do programa.                                                                            */
 void setup()
 {
@@ -240,7 +226,6 @@ void setup()
   pinMode(LCD_BACKGROUND, INPUT);
   pinMode(LIVING_ROOM_LIGHTS_INT, INPUT);
   pinMode(LIVING_ROOM_PIR_SENSOR, INPUT);
-  pinMode(MENU_BUTTON, INPUT);
   pinMode(MENU_UP, INPUT);
   pinMode(MENU_DOWN, INPUT);
 
@@ -261,14 +246,6 @@ void setup()
   livingRoom_lightSensor_signal = -1;
   //  Momento no qual as luzes foram acesas (define como 0).
   livingRoom_time_lights_on = 0;
-  //  Define como padrão a tela 0.
-  menu_screen = 0;
-  //  Zera o horário de abertura do menu.
-  active_lcd_menu = 0;
-  //  Determina a temperatura inicial.
-  temperature = TEMPERATURE;
-  //  Determina o padrão do alarme.
-  alarm_isActive = !ALARM;
   //  Inicializa os horários do relógio.
   hour = START_HOUR;
   minute = START_MINUTE;
@@ -279,7 +256,7 @@ void setup()
   digitalWrite(LIVING_ROOM_LEDS, (int) livingRoom_lights);
 
   //  ~ Inicializa com a tela inicial.
-  LCDWrite("~~ AUTO-CASA! ~~", 0);
+  LCDWrite(String(String(temperature) + String((char) B10110000) + "C"), 0);
 }
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Loop principal do sistema.                                                                                */
@@ -288,13 +265,62 @@ void loop()
   //  ~ Declara e inicializa as variaveis comparativas de estado.
   bool _livingRoom_auto_mode = (bool) digitalRead(LIVING_ROOM_AUTO_LIGHTS);
   bool _livingRoom_lights = false;
+  bool _menu_up = digitalRead(MENU_UP);
+  bool _menu_down = digitalRead(MENU_DOWN);
   int _livingRoom_lightSensor_signal = analogRead(LIVING_ROOM_LIGHT_SENSOR);
-  int _menu_screen = menu_screen;
-
-  float _temperature = temperature;
-  bool _alarm_isActive = alarm_isActive;
+  int _temperature = temperature;
   //  ~ Variáveis de estado locais.
   bool livingRoom_light_low;
+
+  //  ~ Se o menu tiver ativo, liga a led do lcd.
+  digitalWrite(LCD_BACKGROUND, (int) menuActived);
+
+  //  ~ Verifica a existência de click nos botões do menu.
+  if (digitalRead(MENU_UP) == HIGH) 
+  { 
+    //  ~ Altera a temperatura.
+    temperature += TEMP_VAR;
+    //  ~ Ativa o menu.
+    menuActived = true;
+    //  ~ Reseta o tempo de ativação do menu.
+    menuActived_time = millis();
+    //  ~ Faz envio da temperatura.
+    Serial.print(temperature);
+    
+  }
+  if (digitalRead(MENU_DOWN) == HIGH)
+  {
+    //  ~ Altera a temperatura.
+    temperature -= TEMP_VAR;
+    //  ~ Ativa o menu.
+    menuActived = true;
+    //  ~ Reseta o tempo de ativação do menu.
+    menuActived_time = millis();
+    //  ~ Faz envio da temperatura.
+    Serial.print(temperature);
+  }
+
+  //  ~ Verifica se deve ligar ou desligar o led da LCD.
+  if ((menuActived_time != 0))
+  {
+    //  ~ Determina que o menu deve estar ligado.
+    menuActived = true;
+    //  ~ Se millis() - menuActived_time for maior que o tempo para desligar o LCD, ele desliga zerado menuActived_time.
+    if ((millis() - menuActived_time) > MENU_ACCEPT_SLEEP_INTERVAL) menuActived_time = 0;
+  }
+  else
+  {
+    //  ~ Desativa o menu.
+    menuActived = false;
+  }
+
+  //  ~ Se tiver variação no valor da temperatura, altera a leta.
+  if (temperature != _temperature)
+  {
+    //  ~ Atualiza o LCD.
+    LCDWrite(String(String(temperature) + String((char) B10110000) + "C"), 0);
+  }
+
 
   //  ~ Captura e atualiza os valores de estado nas variáveis.
   //  Formato de hora.
@@ -348,100 +374,4 @@ void loop()
 
   //  ~ Atualiza o horário do relógio.
   if(millis() >= (lastClockRefresh + CLOCK_REFRESH_DELAY)) ClockRefresh();
-
-  //  ~ Verifica se o botão do menu foi pressionado.
-  if ((bool) digitalRead(MENU_BUTTON))
-  {
-    //  ~ Incrementa o menu.
-    _menu_screen++;
-    //  ~ Se o incremento ultrapassar 7, retorna para 1.
-    if (_menu_screen > MENU_LIMIT) _menu_screen = 1;
-    //  ~ Por fim, se o contador de inicialização do menu for 0, coloca a tela em '0' e inicializa.
-    if (active_lcd_menu == 0) digitalWrite(LCD_BACKGROUND_LED, HIGH);
-    //  ~ Inicia o contador.
-    active_lcd_menu = millis();
-    //  ~ Aguarda o término do pressionamento do botão.
-    while (digitalRead(MENU_BUTTON)) ;
-  }
-
-  //  ~ Verifica se o menu está muito tempo parado.
-  if (millis() >= (active_lcd_menu + MENU_ACCEPT_SLEEP_INTERVAL))
-  {
-    //  ~ Joga a tela em '0'.
-    _menu_screen = 0;
-    //  ~ Zera o tempo de ativação.
-    active_lcd_menu = 0;
-    //  ~ Desliga a luz de fungo.
-    digitalWrite(LCD_BACKGROUND_LED, LOW);
-  }
-
-  //  ~ Verifica se MENU_UP foi pressionado.
-  if (digitalRead(MENU_UP))
-  {
-    //  ~ Verifica o sentido do botão, basenado-se no menu.
-    switch(_menu_screen)
-    {
-      //  ~ Controlador de temperatura.
-      case 1:
-        temperature += 2;
-      break;
-      //  ~ Alarme.
-      case 2:
-        alarm_isActive = true;
-      break;
-    }
-    //  ~ Força uma atualização.
-    menu_screen = -1;
-    //  ~ Aguarda.
-    while (digitalRead(MENU_UP)) ;
-  }
-
-  //  ~ Verifica se MENU_DOWN foi pressionado.
-  if (digitalRead(MENU_DOWN))
-  {
-    //  ~ Verifica o sentido do botão, basenado-se no menu.
-    switch(_menu_screen)
-    {
-      //  ~ Controlador de temperatura.
-      case 1:
-        temperature -= 2;
-      break;
-      //  ~ Alarme.
-      case 2:
-        alarm_isActive = false;
-      break;
-    }
-    //  ~ Força uma atualização.
-    menu_screen = -1;
-    //  ~ Aguarda.
-    while (digitalRead(MENU_DOWN)) ;
-  }
-
-  //  ~ Verifica alteração no menu.
-  if (_menu_screen != menu_screen)
-  {
-    //  ~ Efetiva a atualização.
-    menu_screen = _menu_screen;
-
-    switch (_menu_screen)
-    {
-      // ~ Menu de abertura.
-      case 0:
-        LCDWrite("~~ AUTO-CASA! ~~", 0);
-      break;
-      //  ~ Controlador de temperatura.
-      case 1:
-        LCDWrite(String("T: " + String((int) temperature) + "." + String(((int) (temperature * 10.0)) % 10) + String((char) B10110000) + "C"), 0);
-      break;
-      //  ~ Alarme.
-      case 2:
-        String alarm_status = alarm_isActive ? "ON" : "OFF";
-        LCDWrite(String("Alarme: " + alarm_status), 0);
-      break;
-    }
-  }
-
-  //  ~ Atualiza o arduino auxiliar.
-  if (_temperature != temperature) { Send(1, temperature); }
-  if (_alarm_isActive != alarm_isActive) { Send(2, _alarm_isActive); }
 }
