@@ -12,12 +12,6 @@
 #define GAS_ALERT_FREQUENCY 392
 //  ~ Intervalo no qual as luzes da garagem ficam ligadas após o acionamento do sensor de presença.
 #define GARAGE_LIGHTS_PIR_INTERVAL 2500
-//  ~ Frequencia da nota do alarme.
-#define EXTERNAL_ALERT_FREQUENCY 720
-//  ~ Duração de toque do alarme.
-#define EXTERNAL_ALERT_DURATION 200
-//  ~ Duração do intervalo de toque do alarme.
-#define EXTERNAL_ALERT_INTERVAL_DURATION 500
 //  ~ Erro considerável de medida de temperatura. O valor inserido deve ser em °C, podendo ser um número inteiro
 //  ou um número real.
 #define TEMPERATURE_MEASUREMENT_ERROR 2.7
@@ -29,10 +23,6 @@
 #define COLDER_LED 4
 //  ~ Sensor de temperatura.
 #define TEMP_SENSOR A4
-//  ~ Alarme da casa
-#define EXTERNAL_ALERT 6
-//  ~ Sensor de presença externa da casa
-#define EXTERNAL_PIR 9
 //  ~ Luzes da garagem
 #define GARAGE_LIGHT 7
 //  ~ Sensor de presença interno da garagem.
@@ -63,14 +53,6 @@ bool garage_lights;
 //  ~ Instante no qual a luz foi ligada.
 unsigned long garage_time_lights_on;
 /* ---------------------------------------------------------------------------------------------------------- */
-/*  Variáveis referentes ao sistema de alarme.                                                                */
-//  ~ Informa se o alerme está ligado ou não.
-bool external_alert_actived;
-//  ~ Informa se o alarme foi acionado ou não.
-bool external_alert;
-//  ~ Metrónomo do alarme.
-unsigned long external_buzzer_metronome;
-/* ---------------------------------------------------------------------------------------------------------- */
 /*  Variáveis referentes ao sistema de climatização da casa.                                                  */
 //  ~ Alteração na temperatura.
 bool temperature_alt = false;
@@ -90,7 +72,6 @@ void setup()
 
   //  ~ Portas de entrada de dados ('INPUT') do arduino.
   pinMode(GARAGE_INTERNAL_PIR, INPUT);
-  pinMode(EXTERNAL_PIR, INPUT);
 
   //  ~ Porta de saída de dados ('OUTPUT') do arduino.
   pinMode(GAS_ALERT, OUTPUT);
@@ -109,14 +90,8 @@ void setup()
   //  Zera os valores de tempo. O valor de 0 indica que a função está ou pode estar desligada.
   gas_engine_start_function = 0;
   gas_buzzer_metronome = 0;
-  external_buzzer_metronome = 0;
   //  Torna a variável da sala como desligada por enquanto.
   garage_lights = false;  
-  //  Coloca o alarme como desativado (o valor em si ira vir do arduino de controle, porém, para fins de evitar erro,
-  //  definimos ele aqui também.
-  external_alert_actived = false;
-  //  Coloca o alerta externo como desligado para evitar problemas.
-  external_alert = false;
   //  A temperatura configura é originada do Arduino de controle, porém, fazemos um uso de um valor base aqui fora de escala para evitar problemas.
   temperature = ((analogRead(TEMP_SENSOR) * (5000.0 / 1024.0)) - 500) / 10.0;;
   //  Coloca o sinal da temperatura ambiente em um valor fora de escala.
@@ -126,7 +101,6 @@ void setup()
   gas_engine_start_function = 0;
   gas_buzzer_metronome = 0;
   garage_time_lights_on = 0;
-  external_buzzer_metronome = 0;
 }
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Loop principal do sistema.                                                                                */
@@ -237,37 +211,6 @@ void loop()
     digitalWrite(GARAGE_LIGHT, _garage_lights);
     //  ~ Equaliza os valores.
     garage_lights = _garage_lights;
-  }
-
-  //  ~ Verifica se o sensor PIR externo foi acionado ou não.
-  if (digitalRead(external_alert)) external_alert = true;
-  //  ~ Se o alarme deve ser ligado ou não.
-  if ((external_alert) and (external_alert_actived))
-  {
-    //  ~ Se o metronomo estiver zerado, inicializa-o.
-    if (external_buzzer_metronome == 0) { external_buzzer_metronome = millis(); tone(EXTERNAL_ALERT, EXTERNAL_ALERT_FREQUENCY, EXTERNAL_ALERT_DURATION); }
-    //  ~ Verifica se deve tocar a próxima nota. O intervalo entre as notas terá a mesma duração da nota.
-    if ((millis() >= (external_buzzer_metronome + EXTERNAL_ALERT_DURATION)) and (!((bool) digitalRead(EXTERNAL_ALERT))))
-    {
-      //  ~ Reseta o metronomo.
-      external_buzzer_metronome = millis();
-      //  ~ Toca a nota.
-      tone(EXTERNAL_ALERT, EXTERNAL_ALERT_FREQUENCY, EXTERNAL_ALERT_DURATION);
-    }
-    //  ~ Verifica se deve fazer um intervalo.
-    if ((millis() >= (external_buzzer_metronome + EXTERNAL_ALERT_INTERVAL_DURATION)) and ((bool) digitalRead(EXTERNAL_ALERT)))
-    {
-      //  ~ Reseta o metronomo.
-      external_buzzer_metronome = millis();
-      //  ~ Toca a nota.
-      noTone(EXTERNAL_ALERT);
-    }
-  }
-  else
-  {
-    //  ~ Desliga o alerta.
-    external_alert = false;
-    noTone(EXTERNAL_ALERT);
   }
 
   //  ~ Verifica se a temperatura registrada na variável e a medida é diferente, se for, executa um processo de alteração.
