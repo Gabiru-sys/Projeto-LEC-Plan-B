@@ -20,7 +20,7 @@
 //  ~ Limite do menu.
 #define MENU_LIMIT 2
 //  ~ Temperatura inicial.
-#define TEMPERATURE 25
+#define TEMPERATURE 24
 //  ~ Estado inicial do alarme.
 #define ALARM false
 /* ---------------------------------------------------------------------------------------------------------- */
@@ -217,9 +217,9 @@ void Send(int code, int message)
   //  ~ Buffer de envio.
   unsigned long _buffer;
   //  ~ Adiciona ao buffer a mensagem.
-  _buffer = message;
+  _buffer = (unsigned long) (message);
   //  ~ Adiciona a esquerda da mensagem o código.
-  _buffer += (code * 10000UL);
+  _buffer += (code * 100000UL);
   //  ~ Envia a mensagem.
   Serial.println(_buffer);
 }
@@ -268,7 +268,7 @@ void setup()
   //  Determina a temperatura inicial.
   temperature = TEMPERATURE;
   //  Determina o padrão do alarme.
-  alarm_isActive = ALARM;
+  alarm_isActive = !ALARM;
   //  Inicializa os horários do relógio.
   hour = START_HOUR;
   minute = START_MINUTE;
@@ -291,7 +291,7 @@ void loop()
   int _livingRoom_lightSensor_signal = analogRead(LIVING_ROOM_LIGHT_SENSOR);
   int _menu_screen = menu_screen;
 
-  bool _temperature = temperature;
+  float _temperature = temperature;
   bool _alarm_isActive = alarm_isActive;
   //  ~ Variáveis de estado locais.
   bool livingRoom_light_low;
@@ -383,7 +383,7 @@ void loop()
     {
       //  ~ Controlador de temperatura.
       case 1:
-        temperature += 0.1;
+        temperature += 2;
       break;
       //  ~ Alarme.
       case 2:
@@ -404,11 +404,11 @@ void loop()
     {
       //  ~ Controlador de temperatura.
       case 1:
-        _temperature -= 0.1;
+        temperature -= 2;
       break;
       //  ~ Alarme.
       case 2:
-        _alarm_isActive = false;
+        alarm_isActive = false;
       break;
     }
     //  ~ Força uma atualização.
@@ -431,17 +431,17 @@ void loop()
       break;
       //  ~ Controlador de temperatura.
       case 1:
-        LCDWrite(String("T: " + String((int) _temperature) + "." + String(((int) (_temperature * 10.0)) % 10) + String((char) B10110000) + "C"), 0);
+        LCDWrite(String("T: " + String((int) temperature) + "." + String(((int) (temperature * 10.0)) % 10) + String((char) B10110000) + "C"), 0);
       break;
       //  ~ Alarme.
       case 2:
-        String alarm_status = _alarm_isActive ? "ON" : "OFF";
+        String alarm_status = alarm_isActive ? "ON" : "OFF";
         LCDWrite(String("Alarme: " + alarm_status), 0);
       break;
     }
   }
 
   //  ~ Atualiza o arduino auxiliar.
-  if (_temperature != temperature) { temperature = _temperature; Send(0, _temperature); }
-  if (_alarm_isActive != alarm_isActive) { alarm_isActive = _alarm_isActive; Send(0, _temperature); }
+  if (_temperature != temperature) { Send(1, temperature); }
+  if (_alarm_isActive != alarm_isActive) { Send(2, _alarm_isActive); }
 }
