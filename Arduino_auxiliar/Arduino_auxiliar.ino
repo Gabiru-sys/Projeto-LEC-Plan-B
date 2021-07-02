@@ -91,6 +91,31 @@ bool alarm_clock_actived;
 //  ~ Metrónomo do despertador.
 unsigned long alarm_clock_buzzer_metronome;
 /* ---------------------------------------------------------------------------------------------------------- */
+/*  Recebe dados do arduino de controle.                                                                      */
+void Receive()
+{
+  //  ~ Recupera o buffer.
+  unsigned long _buffer = (unsigned long) Serial.readString().toInt();
+  //  ~ Recupera a mensagem como float.
+  float message = (float) (_buffer % 100000UL) / 10.0;
+  //  ~ Recupera o código.
+  int code = (int) (_buffer / 100000UL);
+
+  //  ~ Trata a mensagem.
+  switch(code)
+  {
+    case 1:
+      temperature = message;
+      Serial.println(temperature);
+    break;
+      alarm_clock_actived = (bool) message;
+      Serial.println(temperature);
+    case 2:
+      
+    break;
+  }
+}
+/* ---------------------------------------------------------------------------------------------------------- */
 /*  Função de entrada do programa.                                                                            */
 void setup()
 {
@@ -140,11 +165,16 @@ void setup()
   garage_time_lights_on = 0;
   external_buzzer_metronome = 0;
   alarm_clock_buzzer_metronome = 0;
+
+  //  ~ Desliga o buzzer.
+    noTone(ROOM_ALARM_CLOCK);
 }
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Loop principal do sistema.                                                                                */
 void loop()
 {
+  //  ~ Recebe dados.
+  if (Serial.available() > 0) Receive();
   //  ~ Declara e inicializa as variaveis comparativas de estado.
   int _gas_signal = analogRead(GAS_SENSOR);
   int _environment_temperature_signal = analogRead(TEMP_SENSOR);
