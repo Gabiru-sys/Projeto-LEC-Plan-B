@@ -20,13 +20,7 @@
 #define EXTERNAL_ALERT_INTERVAL_DURATION 500
 //  ~ Erro considerável de medida de temperatura. O valor inserido deve ser em °C, podendo ser um número inteiro
 //  ou um número real.
-#define TEMPERATURE_MEASUREMENT_ERROR 3.5
-//  ~ Frequencia da nota do alarme.
-#define ALARM_CLOCK_FREQUENCY 240
-//  ~ Duração de toque do alarme.
-#define ALARM_CLOCK_DURATION 500
-//  ~ Duração do intervalo de toque do alarme.
-#define ALARM_CLOCK_INTERVAL_DURATION 1000
+#define TEMPERATURE_MEASUREMENT_ERROR 2.7
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Definição de referências de uso para as portas do arduino.                                                */
 //  ~ LED de informação do aquecedor.
@@ -49,8 +43,6 @@
 #define GAS_FORCE_CLOSE_ENGINE 12
 //  ~ Sensor de gás.
 #define GAS_SENSOR A5
-//  ~ Despertador.
-#define ROOM_ALARM_CLOCK 5
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Variáveis referentes ao sistema de vazamento de gás.                                                      */
 //  ~ Indica que o vazamento de gás está ativo.
@@ -80,41 +72,12 @@ bool external_alert;
 unsigned long external_buzzer_metronome;
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Variáveis referentes ao sistema de climatização da casa.                                                  */
+//  ~ Alteração na temperatura.
+bool temperature_alt = false;
 //  ~ Determina a temperatura configurada.
 float temperature;
 //  ~ Sinal da temperatura ambiente.
 int environment_temperature_signal;
-/* ---------------------------------------------------------------------------------------------------------- */
-/*  Variáveis do despertador.                                                                                 */
-//  ~ Indica se o despertador está acionado ou não.
-bool alarm_clock_actived;
-//  ~ Metrónomo do despertador.
-unsigned long alarm_clock_buzzer_metronome;
-/* ---------------------------------------------------------------------------------------------------------- */
-/*  Recebe dados do arduino de controle.                                                                      */
-void Receive()
-{
-  //  ~ Recupera o buffer.
-  unsigned long _buffer = (unsigned long) Serial.readString().toInt();
-  //  ~ Recupera a mensagem como float.
-  float message = (float) (_buffer % 100000UL) / 10.0;
-  //  ~ Recupera o código.
-  int code = (int) (_buffer / 100000UL);
-
-  //  ~ Trata a mensagem.
-  switch(code)
-  {
-    case 1:
-      temperature = message;
-      Serial.println(temperature);
-    break;
-      alarm_clock_actived = (bool) message;
-      Serial.println(temperature);
-    case 2:
-      
-    break;
-  }
-}
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Função de entrada do programa.                                                                            */
 void setup()
@@ -122,6 +85,8 @@ void setup()
   //  ~ Inicializa o Serial.
   Serial.begin(9600);
   while (!Serial);
+  //  ~ Diminui o Timeout da Serial.
+  Serial.setTimeout(50);
 
   //  ~ Portas de entrada de dados ('INPUT') do arduino.
   pinMode(GARAGE_INTERNAL_PIR, INPUT);
@@ -156,25 +121,17 @@ void setup()
   temperature = ((analogRead(TEMP_SENSOR) * (5000.0 / 1024.0)) - 500) / 10.0;;
   //  Coloca o sinal da temperatura ambiente em um valor fora de escala.
   environment_temperature_signal = -1;
-  //  Define o despertador como desligado, apesar de seu valor ser monitorado pelo controlador.
-  alarm_clock_actived = false;
   
   //  Zera os valores de tempo. O valor de 0 indica que a função está ou pode estar desligada.
   gas_engine_start_function = 0;
   gas_buzzer_metronome = 0;
   garage_time_lights_on = 0;
   external_buzzer_metronome = 0;
-  alarm_clock_buzzer_metronome = 0;
-
-  //  ~ Desliga o buzzer.
-    noTone(ROOM_ALARM_CLOCK);
 }
 /* ---------------------------------------------------------------------------------------------------------- */
 /*  Loop principal do sistema.                                                                                */
 void loop()
 {
-  //  ~ Recebe dados.
-  if (Serial.available() > 0) Receive();
   //  ~ Declara e inicializa as variaveis comparativas de estado.
   int _gas_signal = analogRead(GAS_SENSOR);
   int _environment_temperature_signal = analogRead(TEMP_SENSOR);
@@ -314,7 +271,7 @@ void loop()
   }
 
   //  ~ Verifica se a temperatura registrada na variável e a medida é diferente, se for, executa um processo de alteração.
-  if (_environment_temperature_signal != environment_temperature_signal)
+  if ((_environment_temperature_signal != environment_temperature_signal) or (temperature_alt))
   {
     //  ~ Equaliza os valores.
     environment_temperature_signal = _environment_temperature_signal;
@@ -323,7 +280,6 @@ void loop()
     //  ~ Verifica se a temperatura medida é diferente da temperatura em que o ambiente deve estar. Se for superior, liga
     //  o ar-condicionado em modo de refrigeração, se for inferior, liga no modo de aquecimento.
     //  Como a medição não é perfeita, considera-se a definição de TEMPERATURE_MEASUREMENT_ERROR.
-    Serial.print(environment_temperature);
     if (environment_temperature > (temperature + TEMPERATURE_MEASUREMENT_ERROR)) 
     {
       //  ~ Liga a luz de refrigeração.
@@ -342,35 +298,9 @@ void loop()
       digitalWrite(HEATER_LED, LOW);
       digitalWrite(COLDER_LED, LOW);
     }
+    temperature_alt = false;
   }
-
-  //  ~ Liga e desliga o despertador.
-  if (alarm_clock_actived)
-  {
-    //  ~ Se o metronomo estiver zerado, inicializa-o.
-    if (alarm_clock_buzzer_metronome == 0) { alarm_clock_buzzer_metronome = millis(); tone(ROOM_ALARM_CLOCK, ALARM_CLOCK_FREQUENCY, ALARM_CLOCK_DURATION); }
-    //  ~ Verifica se deve tocar a próxima nota. O intervalo entre as notas terá a mesma duração da nota.
-    if ((millis() >= (alarm_clock_buzzer_metronome + ALARM_CLOCK_DURATION)) and (!((bool) digitalRead(ROOM_ALARM_CLOCK))))
-    {
-      //  ~ Reseta o metronomo.
-      alarm_clock_buzzer_metronome = millis();
-      //  ~ Toca a nota.
-      tone(ROOM_ALARM_CLOCK, ALARM_CLOCK_FREQUENCY, ALARM_CLOCK_DURATION);
-    }
-    //  ~ Verifica se deve fazer um intervalo.
-    if ((millis() >= (alarm_clock_buzzer_metronome + ALARM_CLOCK_INTERVAL_DURATION)) and ((bool) digitalRead(ROOM_ALARM_CLOCK)))
-    {
-      //  ~ Reseta o metronomo.
-      alarm_clock_buzzer_metronome = millis();
-      //  ~ Toca a nota.
-      noTone(ROOM_ALARM_CLOCK);
-    }
-  }
-  else
-  {
-    //  ~ Desliga o buzzer.
-    noTone(ROOM_ALARM_CLOCK);
-    //  ~ Zera o metronomo.
-    alarm_clock_buzzer_metronome = 0;
-  }
+  
+  //  ~ Recebe dados.
+  if (Serial.available() > 0) { Serial.print(temperature); Serial.print(" >> "); temperature = (float) Serial.readString().toInt(); Serial.println(temperature); temperature_alt = true; }
 }
